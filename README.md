@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # vol_pipeline
 
 Weekly multi-asset volatility / covariance modelling pipeline for BTC-USD,
@@ -127,3 +128,6 @@ well-defined throughout the backtest window.
   (per-asset vol) comes from the ML model, which is consistent with your
   research question of isolating the *volatility forecasting* effect but
   is worth stating explicitly in the methodology section.
+=======
+# portfolio-optimizer
+>>>>>>> fcff5be6b433b793331d092555ee1583ac85acc0
