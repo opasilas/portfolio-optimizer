@@ -15,24 +15,30 @@ End-to-end pipeline:
 
 Usage
 -----
-    python -m vol_pipeline.main --start 2016-01-01 --min-train-weeks 104
+    python main.py --start 2016-01-01 --min-train-weeks 104
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
+import os
+import pickle
+from typing import Tuple
 
+import numpy as np
 import pandas as pd
 
-from . import data as data_mod
-from . import models_garch as garch_mod
-from . import models_markov as markov_mod
-from . import models_xgboost as xgb_mod
-from .covariance import validate_covariance
+import data as data_mod
+import models_garch as garch_mod
+import models_markov as markov_mod
+import models_xgboost as xgb_mod
+from covariance import validate_covariance
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+np.random.seed(42)  # reproducibility for any stochastic step in the walk-forward loop
 
 
 def run_walk_forward(
@@ -41,7 +47,7 @@ def run_walk_forward(
     min_train_weeks: int = 104,
     refit_every: int = 1,
     xgb_window_weeks: int = xgb_mod.ROLLING_WINDOW_WEEKS,
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Walk forward through the weekly sample. At each step i (once
     `min_train_weeks` of history are available), refit each of the three
@@ -52,11 +58,24 @@ def run_walk_forward(
     (in weeks) to trade off fidelity against runtime; XGBoost is always
     re-fit each step since it trains on a fixed-size rolling window.
 
-    Returns a tidy long-format DataFrame with one row per
-    (forecast_date, model) validation result.
+    Returns
+    -------
+    (validation_results, forecasts) : Tuple[pd.DataFrame, pd.DataFrame]
+        `validation_results` is a tidy long-format frame with one row per
+        (forecast_date, model) validation result.
+
+        `forecasts` is a tidy long-format frame with one row per
+        (forecast_date, model) forecast that *passed* validation, holding
+        columns `date`, `model`, `cov_matrix` (4x4 np.ndarray, asset order
+        matching `weekly_returns.columns`) and `next_week_returns` (4,
+        np.ndarray of realised log-returns for that forecast date). Invalid
+        forecasts are dropped here since they are not usable by a
+        downstream portfolio optimiser.
     """
+    tickers = list(weekly_returns.columns)
     dates = weekly_returns.index
     records = []
+    forecast_records = []
 
     garch_fits, markov_fit = None, None
     n_steps = len(dates) - min_train_weeks - 1
@@ -83,8 +102,8 @@ def run_walk_forward(
         Sigma_xgb = xgb_mod.xgb_forecast_covariance(train_returns, train_rv, xgb_window_weeks)
 
         for model_name, Sigma in (
-            ("GARCH(1,1)-CCC", Sigma_garch),
-            ("Markov(3-state)", Sigma_markov),
+            ("GARCH", Sigma_garch),
+            ("Markov", Sigma_markov),
             ("XGBoost", Sigma_xgb),
         ):
             if Sigma is None:
@@ -102,8 +121,17 @@ def run_walk_forward(
                     max_asymmetry=v.max_asymmetry,
                 )
             )
+            if v.is_valid:
+                forecast_records.append(
+                    dict(
+                        date=forecast_date,
+                        model=model_name,
+                        cov_matrix=Sigma.reindex(index=tickers, columns=tickers).values,
+                        next_week_returns=weekly_returns.loc[forecast_date, tickers].values,
+                    )
+                )
 
-    return pd.DataFrame.from_records(records)
+    return pd.DataFrame.from_records(records), pd.DataFrame.from_records(forecast_records)
 
 
 def main() -> None:
@@ -115,16 +143,22 @@ def main() -> None:
                          help="Burn-in period (weeks) before the first forecast.")
     parser.add_argument("--refit-every", type=int, default=1,
                          help="Re-fit GARCH/Markov every N weeks (1 = every week).")
-    parser.add_argument("--out", default="covariance_validation_results.csv")
+    parser.add_argument("--out", default="outputs/covariance_validation_results.csv")
+    parser.add_argument("--forecasts-out", default="outputs/forecasts.pkl",
+                         help="Pickle path for the persisted covariance-forecast/return series "
+                              "consumed by portfolio_backtester.py and statistical_tests.py.")
     args = parser.parse_args()
 
-    weekly_prices, weekly_returns, weekly_rv = data_mod.build_dataset(args.tickers, args.start, args.end)
+    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(args.forecasts_out) or ".", exist_ok=True)
+
+    _, weekly_returns, weekly_rv = data_mod.build_dataset(args.tickers, args.start, args.end)
     logger.info(
         "Sample: %d weekly observations, %s to %s",
         len(weekly_returns), weekly_returns.index.min().date(), weekly_returns.index.max().date(),
     )
 
-    results = run_walk_forward(
+    results, forecasts = run_walk_forward(
         weekly_returns,
         weekly_rv,
         min_train_weeks=args.min_train_weeks,
@@ -132,6 +166,26 @@ def main() -> None:
     )
     results.to_csv(args.out, index=False)
     logger.info("Wrote %d validation records to %s", len(results), args.out)
+
+    # Full-sample Markov fit, kept separate from the walk-forward loop above.
+    # It is not used for forecasting (that stays purely walk-forward / no
+    # look-ahead); it exists only to hand statistical_tests.py a single
+    # regime-state sequence for the order-selection diagnostic (1st- vs
+    # 2nd-order Markov chain LRT) requested in Requirement 3.
+    full_sample_markov_fit = markov_mod.fit_markov(weekly_returns, weekly_rv)
+
+    forecast_payload = dict(
+        tickers=list(weekly_returns.columns),
+        weekly_returns=weekly_returns,
+        forecasts=forecasts,
+        regime_states=full_sample_markov_fit.state_sequence,
+    )
+    with open(args.forecasts_out, "wb") as f:
+        pickle.dump(forecast_payload, f)
+    logger.info(
+        "Wrote %d covariance forecasts (%d models) to %s",
+        len(forecasts), forecasts["model"].nunique() if not forecasts.empty else 0, args.forecasts_out,
+    )
 
     summary = results.groupby("model")["is_valid"].agg(["mean", "sum", "count"])
     summary.columns = ["pct_valid", "n_valid", "n_total"]

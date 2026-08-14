@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 from xgboost import XGBRegressor
 
-from . import features as feat_mod
+import features as feat_mod
 
 XGB_PARAMS = dict(
     n_estimators=300,
