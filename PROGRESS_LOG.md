@@ -1,6 +1,18 @@
-b# Progress Log
+# Progress Log
 
 This log records weekly development progress on the portfolio-optimizer project, together with a summary of each supervision meeting held with Prof. Peter Tino over the course of the dissertation. Because development was carried out primarily in a local environment with infrequent commits (see Appendix A of the dissertation), this log is the more complete record of how the project actually progressed week to week.
+
+**Contents**
+1. [Week 1 — 22 June to 28 June](#week-1--22-june-to-28-june) — scoping candidate project directions
+2. [Week 2 — 29 June to 5 July](#week-2--29-june-to-5-july) — options/straddle data ruled out
+3. [Week 3 — 6 July to 12 July](#week-3--6-july-to-12-july) — pivot to Sharpe-ratio-maximising portfolio construction
+4. [Week 4 — 13 July to 19 July](#week-4--13-july-to-19-july) — data-ingestion layer
+5. [Week 5 — 20 July to 26 July](#week-5--20-july-to-26-july) — three-model comparison design settled
+6. [Week 6 — 27 July to 2 August](#week-6--27-july-to-2-august) — CCC-GARCH and Markov regime mixture implemented
+7. [Week 7 — 3 August to 9 August](#week-7--3-august-to-9-august) — XGBoost forecaster and walk-forward loop
+8. [Week 8 — 10 August to 16 August](#week-8--10-august-to-16-august) — optimiser, fee sweep, statistical evaluation
+9. [Week 9 — 17 August to 23 August](#week-9--17-august-to-23-august) — full backtest and results restructuring
+10. [Week 10 — 24 August to 31 August](#week-10--24-august-to-31-august) — demo, final meeting, submission
 
 ---
 
@@ -154,7 +166,7 @@ This log records weekly development progress on the portfolio-optimizer project,
 - Needed to respond to Peter's request for a formal Markov order-selection test without simply asserting the first-order specification was "good enough."
 
 **How I addressed them**
-- Designed a nested Likelihood Ratio Test comparing the first-order model against a second-order model fitted on the identical sequence of observed regime-state triples, so the two specifications were properly nested and the test was statistically valid, backed up with AIC/BIC as corroborating evidence. This became SRQ~4 in the final dissertation.
+- Designed a nested Likelihood Ratio Test comparing the first-order model against a second-order model fitted on the identical sequence of observed regime-state triples, so the two specifications were properly nested and the test was statistically valid, backed up with AIC/BIC as corroborating evidence. This became SRQ 4 in the final dissertation.
 
 **Plans for next week**
 - Implement the Markov order-selection diagnostic.
@@ -169,7 +181,7 @@ This log records weekly development progress on the portfolio-optimizer project,
 **What I achieved this week**
 - Implemented the constrained SLSQP portfolio optimiser under both Max-Sharpe and Max-Return objectives, with the fully-invested, long-only simplex constraints.
 - Implemented the turnover-friction layer and the three-tier transaction-cost sweep (0.0%, 0.1%, 0.3%), designed so a single optimised weight path could be replayed across all three fee tiers without re-optimising.
-- Implemented the statistical evaluation stage: the 1,000-resample bootstrap confidence intervals on annualised Sharpe, and the SRQ~1–3 comparison tables.
+- Implemented the statistical evaluation stage: the 1,000-resample bootstrap confidence intervals on annualised Sharpe, and the SRQ 1–3 comparison tables.
 - Implemented the nested Markov order-selection LRT/AIC/BIC diagnostic agreed at the previous meeting.
 
 **Challenges encountered**
@@ -177,8 +189,8 @@ This log records weekly development progress on the portfolio-optimizer project,
 - Deciding how to fairly compare strategies across fee tiers without conflating the effect of the optimisation objective with the effect of transaction costs took some care.
 
 **How I addressed them**
-- Confirmed analytically that the corner-solution behaviour was the mathematically correct outcome of a purely linear objective over a probability simplex (the true optimum of a linear programme is a vertex of the feasible region), not a solver bug — this became a substantive finding (SRQ~1) rather than a defect to fix.
-- Separated the optimisation and fee-replay steps structurally, so each strategy's weight path is optimised exactly once and then replayed unmodified against all three fee tiers, isolating the fee-sensitivity comparison (SRQ~2) from the optimisation objective itself.
+- Confirmed analytically that the corner-solution behaviour was the mathematically correct outcome of a purely linear objective over a probability simplex (the true optimum of a linear programme is a vertex of the feasible region), not a solver bug — this became a substantive finding (SRQ 1) rather than a defect to fix.
+- Separated the optimisation and fee-replay steps structurally, so each strategy's weight path is optimised exactly once and then replayed unmodified against all three fee tiers, isolating the fee-sensitivity comparison (SRQ 2) from the optimisation objective itself.
 
 **Plans for next week**
 - Run the full walk-forward backtest end to end and extract the headline results.
@@ -196,7 +208,7 @@ This log records weekly development progress on the portfolio-optimizer project,
 
 **What I achieved this week**
 - Completed the full walk-forward backtest (449 weekly steps) across all three covariance models, two objectives, and three fee tiers, and generated the headline performance tables and figures.
-- Restructured the results presentation around the Primary RQ and SRQs~1–4 directly, following Peter's feedback.
+- Restructured the results presentation around the Primary RQ and SRQs 1–4 directly, following Peter's feedback.
 - Prepared clearer explanatory material on the Markov regime-mixture construction for the demo.
 
 **Challenges encountered**
