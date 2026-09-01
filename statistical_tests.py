@@ -15,6 +15,7 @@ and `outputs/forecasts.pkl` (from `main.py`) to produce:
      AIC, BIC) on the K-Means regime sequence.
   6. Publication-ready figures in `figures/`:
        Fig1_Equity_Curves.png, Fig2_Asset_Allocations.png,
+       Fig2_Asset_Allocations_GARCH.png, Fig2_Asset_Allocations_Markov.png,
        Fig2_Asset_Allocations_XGBoost.png, Fig3_Drawdowns.png
 
 Usage
@@ -566,6 +567,36 @@ def main() -> None:
         print(f"Wrote {args.figures_dir}/Fig2_Asset_Allocations_XGBoost.png")
     else:
         print("Skipped Fig2_Asset_Allocations_XGBoost.png: no XGBoost-Sharpe rows at the reference fee tier.")
+
+    # Same dedicated treatment for GARCH and Markov, so all three models have
+    # a like-for-like allocation figure regardless of which one wins on Sharpe.
+    garch_written = plot_asset_allocations(
+        default_view,
+        "GARCH-Sharpe",
+        weight_cols,
+        os.path.join(args.figures_dir, "Fig2_Asset_Allocations_GARCH.png"),
+        title="Asset Allocation Over Time — GARCH-Sharpe (CCC-GARCH)",
+        dpi=300,
+        year_axis=True,
+    )
+    if garch_written:
+        print(f"Wrote {args.figures_dir}/Fig2_Asset_Allocations_GARCH.png")
+    else:
+        print("Skipped Fig2_Asset_Allocations_GARCH.png: no GARCH-Sharpe rows at the reference fee tier.")
+
+    markov_written = plot_asset_allocations(
+        default_view,
+        "Markov-Sharpe",
+        weight_cols,
+        os.path.join(args.figures_dir, "Fig2_Asset_Allocations_Markov.png"),
+        title="Asset Allocation Over Time — Markov-Sharpe (3-State Regime)",
+        dpi=300,
+        year_axis=True,
+    )
+    if markov_written:
+        print(f"Wrote {args.figures_dir}/Fig2_Asset_Allocations_Markov.png")
+    else:
+        print("Skipped Fig2_Asset_Allocations_Markov.png: no Markov-Sharpe rows at the reference fee tier.")
 
     plot_drawdowns(default_view, os.path.join(args.figures_dir, "Fig3_Drawdowns.png"))
     print(f"Wrote {args.figures_dir}/Fig3_Drawdowns.png")

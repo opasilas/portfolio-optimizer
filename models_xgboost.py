@@ -43,6 +43,7 @@ TRADING_DAYS_PER_WEEK = 5
 ROLLING_WINDOW_WEEKS = max(ROLLING_WINDOW_DAYS // TRADING_DAYS_PER_WEEK, 20)
 MIN_TRAIN_OBS = 30
 
+ #experiement with 5/10 days
 
 @dataclass
 class XgbAssetFit:

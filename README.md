@@ -273,8 +273,7 @@ resamples-with-replacement of its weekly net returns (`numpy.random.choice`,
 seeded) each produce an annualised Sharpe estimate; the 2.5th/97.5th
 percentiles of that distribution give the 95% CI. This treats weekly net
 returns as i.i.d., which understates uncertainty under volatility clustering
-or autocorrelation — worth flagging as a limitation alongside a
-block-bootstrap extension.
+or autocorrelation.
 
 **SRQ 1 — objective comparison (`build_srq1_table` / `srq1_verdict`).** At
 the reference fee tier, the six model×objective strategies are compared on
@@ -325,19 +324,20 @@ both orders.
 **Figures (`figures/`).** All four use the reference view (default fee
 tier, Max-Sharpe + Equal-Weight) so they stay readable rather than
 overlaying all 21 series. Weight-evolution charts use a fixed
-`ASSET_COLORS` mapping (BTC blue, SPY orange, GLD green, TLT red) so both
-allocation figures are visually consistent with each other:
+`ASSET_COLORS` mapping (BTC blue, SPY orange, GLD green, TLT red) so every
+allocation figure is visually consistent with the others:
 - `Fig1_Equity_Curves.png` — cumulative net-return equity curves, all 4 strategies.
 - `Fig2_Asset_Allocations.png` — stacked-area weight evolution for the
   highest-Sharpe strategy (selected automatically from the summary table —
   in practice this is often the static `Equal-Weight` baseline, which plots
   as a flat, uninformative band whenever it wins on Sharpe).
-- `Fig2_Asset_Allocations_XGBoost.png` — the same stacked-area chart, but
-  always for `XGBoost-Sharpe` specifically, regardless of which strategy
-  ranks highest — the dedicated view for demonstrating the ML pipeline's
-  dynamic rebalancing behaviour in slides/the dissertation. Skipped (with a
-  console message, not a crash) if no `XGBoost-Sharpe` rows exist at the
-  reference fee tier. Rendered at `dpi=300` with a year-only x-axis.
+- `Fig2_Asset_Allocations_XGBoost.png` / `_GARCH.png` / `_Markov.png` — the
+  same stacked-area chart, but always for `XGBoost-Sharpe`, `GARCH-Sharpe`
+  and `Markov-Sharpe` respectively, regardless of which strategy ranks
+  highest — a like-for-like dedicated view per model for slides/the
+  dissertation. Each is skipped (with a console message, not a crash) if
+  that strategy has no rows at the reference fee tier. Rendered at
+  `dpi=300` with a year-only x-axis.
 - `Fig3_Drawdowns.png` — drawdown-from-peak paths, all 4 strategies, to
   compare behaviour during stress periods.
 
